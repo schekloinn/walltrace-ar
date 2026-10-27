@@ -1,0 +1,58 @@
+name: Build WallTrace AR IPA
+"on":
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: walltrace-ipa-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    # Standard runner. Public repository runner time is free (see README).
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show actual toolchain
+        run: |
+          set -euo pipefail
+          test -d "$DEVELOPER_DIR"
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+          sw_vers
+      - name: Install project generator
+        run: |
+          set -euo pipefail
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            HOMEBREW_NO_AUTO_UPDATE=1 brew install xcodegen
+          fi
+          xcodegen --version
+      - name: Generate and build device app
+        run: bash scripts/build-ipa.sh
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: WallTraceAR-IPA
+          path: |
+            build/WallTraceAR.ipa
+            build/WallTraceAR.ipa.sha256
+            build/toolchain.txt
+          if-no-files-found: error
+          retention-days: 3
+      - name: Upload build diagnostics and generated project
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: WallTraceAR-build-diagnostics
+          path: |
+            build/build.log
+            build/toolchain.txt
+            build/Build.xcresult
+            WallTraceAR.xcodeproj
+          if-no-files-found: warn
+          retention-days: 3
