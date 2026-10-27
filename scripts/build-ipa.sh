@@ -24,7 +24,7 @@ xcodebuild \
   -destination 'generic/platform=iOS' \
   -derivedDataPath build/DerivedData \
   -resultBundlePath build/Build.xcresult \
-  ARCHS=arm64 ONLY_ACTIVE_ARCH=NO \
+  ARCHS=arm64 ONLY_ACTIVE_ARCH=NO TARGETED_DEVICE_FAMILY=1 \
   IPHONEOS_DEPLOYMENT_TARGET=15.0 \
   CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
   CODE_SIGN_IDENTITY='' DEVELOPMENT_TEAM='' \
@@ -35,6 +35,11 @@ test -d "$app"
 executable=$(/usr/libexec/PlistBuddy -c 'Print CFBundleExecutable' "$app/Info.plist")
 xcrun lipo "$app/$executable" -verify_arch arm64
 /usr/libexec/PlistBuddy -c 'Print MinimumOSVersion' "$app/Info.plist" | grep -Fx '15.0'
+/usr/libexec/PlistBuddy -c 'Print UIDeviceFamily:0' "$app/Info.plist" | grep -Fx '1'
+if /usr/libexec/PlistBuddy -c 'Print UIDeviceFamily:1' "$app/Info.plist" >/dev/null 2>&1; then
+  echo 'Unexpected extra device family; expected iPhone only.' >&2
+  exit 1
+fi
 # Ad-hoc here means codesign identity '-', NOT Apple's Ad Hoc distribution.
 # Sign nested Swift libraries first if Xcode embeds any for the deployment target.
 if [[ -d "$app/Frameworks" ]]; then
