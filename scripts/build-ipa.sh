@@ -33,7 +33,7 @@ xcodebuild \
 app='build/DerivedData/Build/Products/Release-iphoneos/WallTrace AR.app'
 test -d "$app"
 executable=$(/usr/libexec/PlistBuddy -c 'Print CFBundleExecutable' "$app/Info.plist")
-xcrun lipo -verify_arch arm64 "$app/$executable"
+xcrun lipo "$app/$executable" -verify_arch arm64
 /usr/libexec/PlistBuddy -c 'Print MinimumOSVersion' "$app/Info.plist" | grep -Fx '15.0'
 # Ad-hoc here means codesign identity '-', NOT Apple's Ad Hoc distribution.
 # Sign nested Swift libraries first if Xcode embeds any for the deployment target.
