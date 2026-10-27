@@ -51,6 +51,7 @@ jobs:
           name: WallTraceAR-build-diagnostics
           path: |
             build/build.log
+            build/checks.log
             build/toolchain.txt
             build/Build.xcresult
             WallTraceAR.xcodeproj

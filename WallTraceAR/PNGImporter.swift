@@ -22,7 +22,11 @@ enum PNGImporter {
         let limit = 32 * 1024 * 1024
         guard let size = values.fileSize, size > 0, size <= limit else { throw ImportError.tooLarge }
         let data = try Data(contentsOf: url, options: .mappedIfSafe)
-        guard data.count <= limit else { throw ImportError.tooLarge }
+        return try decode(data)
+    }
+
+    static func decode(_ data: Data) throws -> UIImage {
+        guard data.count <= 32 * 1024 * 1024 else { throw ImportError.tooLarge }
         guard data.starts(with: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]),
               let source = CGImageSourceCreateWithData(data as CFData, nil),
               CGImageSourceGetType(source) as String? == UTType.png.identifier else {

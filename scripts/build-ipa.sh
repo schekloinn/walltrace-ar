@@ -13,6 +13,9 @@ fi
   xcodegen --version
 } | tee build/toolchain.txt
 /usr/bin/plutil -lint WallTraceAR/Info.plist
+# Run the pure Swift model and stabilization checks on the macOS host.
+xcrun swiftc -O -swift-version 5 WallTraceAR/ImageSlots.swift WallTraceAR/AnchorStabilizer.swift WallTraceAR/SavedProject.swift Tests/Checks.swift -o build/WallTraceChecks
+build/WallTraceChecks | tee build/checks.log
 xcodegen generate --spec project.yml
 # Parse with the selected Apple compiler before the full device build.
 xcrun swiftc -frontend -parse WallTraceAR/*.swift
