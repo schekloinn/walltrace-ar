@@ -42,7 +42,7 @@ struct SavedProject: Codable {
             }
             guard image.png.count <= 32 * 1024 * 1024 else { throw StorageError.tooLarge }
         }
-        guard worldMap.count <= maximumBytes else { throw StorageError.tooLarge }
+        guard worldMap.count <= Self.maximumBytes else { throw StorageError.tooLarge }
     }
 
     func write(to url: URL) throws {
