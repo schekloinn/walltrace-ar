@@ -2,7 +2,9 @@
 
 Мінімальний iOS-застосунок на Swift, UIKit, ARKit і SceneKit. Deployment target **iOS 15.0**, лише iPhone, орієнтація портретна. Зовнішніх runtime-залежностей немає. Вихідний проєкт задано через `project.yml` для XcodeGen; workflow генерує справжній `WallTraceAR.xcodeproj` і збирає device arm64.
 
-**Цей ZIP містить вихідний код, не готову IPA.** IPA створюється після успішного запуску вашого GitHub Actions workflow. Збірку на macOS і запуск на фізичному iPhone тут не виконано: розробка та локальна перевірка відбувалися на Windows. Деталі перевірки — у `VALIDATION.md`.
+**Готову `WallTraceAR.ipa` зібрано на macOS через GitHub Actions:** [успішна збірка #4](https://github.com/schekloinn/walltrace-ar/actions/runs/40581896148). Вона надається окремо від вихідного ZIP; також доступна в artifact `WallTraceAR-IPA` цієї збірки до його закінчення. Вихідний ZIP містить код і workflow для повторної збірки. Apple Swift compile, arm64, мінімальна iOS 15.0, сімейство iPhone, ad-hoc підпис і цілісність IPA перевірені. **Запуск на фізичному iPhone та встановлення через TrollStore ще не перевірялися.** Деталі — у `VALIDATION.md` і `BUILD-REPORT.md`.
+
+Публічний репозиторій: [schekloinn/walltrace-ar](https://github.com/schekloinn/walltrace-ar). Якщо користуєтеся готовою IPA, передайте її на iPhone та відкрийте через TrollStore; кроки створення власного repo нижче потрібні лише для самостійного повторення збірки.
 
 ## Отримати IPA без Mac
 
@@ -34,7 +36,7 @@ Workflow використовує `xcodebuild ... -sdk iphoneos -destination gen
 
 Безкоштовність runner time не означає необмежене зберігання: у GitHub Free включено 500 MB artifact storage, спільного з GitHub Packages; є й інші ліміти сервісу. Тут artifact зберігаються **3 дні**, збірка обмежена 30 хвилинами. Видаляйте старі artifacts, якщо сховище заповнене. Акаунтні обмеження чи політики організації також можуть заборонити запуск. [Ліміти GitHub](https://docs.github.com/en/actions/reference/limits).
 
-Обрано **`macos-15` + `/Applications/Xcode_16.4.app`**: Xcode 16.4 є в опублікованому списку цього arm64 runner image; workflow друкує реальні версії й зупиняється, якщо Xcode зник. Образи змінюються з часом. [Поточний inventory GitHub](https://github.com/actions/runner-images/blob/main/images/macos/macos-15-arm64-Readme.md). Apple розрізняє deployment target і підтримку підключеного пристрою: збірка generic device не потребує підключення iPhone 7 до нового Xcode. [Таблиця Xcode Apple](https://developer.apple.com/xcode/system-requirements).
+Обрано **`macos-15-intel` + `/Applications/Xcode_16.4.app`**: Xcode 16.4 є в опублікованому списку цього Intel runner image; workflow друкує реальні версії й зупиняється, якщо Xcode зник. Образи змінюються з часом. [Поточний inventory GitHub](https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md). Apple розрізняє deployment target і підтримку підключеного пристрою: збірка generic device не потребує підключення iPhone 7 до нового Xcode. [Таблиця Xcode Apple](https://developer.apple.com/xcode/system-requirements).
 
 XcodeGen встановлюється через Homebrew лише як інструмент збірки. Версія записується в `toolchain.txt`; застосунок його не містить. [XcodeGen](https://github.com/yonaskolb/XcodeGen).
 

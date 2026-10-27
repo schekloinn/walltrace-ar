@@ -1,31 +1,41 @@
 # Перевірка WallTrace AR
 
-Дата: 2026-10-27. Середовище: Windows; Apple SDK і Xcode відсутні.
+Дата: 27 жовтня 2026 року. Розробка та локальна перевірка — Windows. Фактична device-збірка — GitHub-hosted macOS runner. Репозиторій опублікований після окремого дозволу користувача.
 
-## Виконано
+## Підтверджена macOS-збірка
 
-- PyYAML 6.0.3: успішно розібрані `project.yml` і `.github/workflows/build-ipa.yml`, додатково відхилялися дублікати ключів. Перевірені target iOS 15.0, scheme, відсутність Swift package runtime-залежностей, ручний trigger, read-only permissions, macos-15 та шлях Xcode 16.4.
-- Python `plistlib`: успішно розібраний `Info.plist`, перевірені camera usage, arm64/arkit capabilities, iOS 15.0, портретна орієнтація й тип app bundle.
-- Tree-sitter 0.26.0 + tree-sitter-swift 0.7.4: усі три Swift-файли розібрані без `ERROR` і пропущених вузлів.
-- Tree-sitter-bash 0.25.1: `scripts/build-ipa.sh` розібраний без помилок синтаксичного дерева.
-- 48 незалежних числових випадків для матриці розміщення: різні напрямки стіни та обидві її сторони. Перевірені одинична довжина й ортогональність осей, вертикальність, додатний визначник і нормаль у бік камери. Це перевірка математики, не AR-поведінки пристрою.
-- Ручна перевірка шляхів XcodeGen, відповідності scheme/product/Info.plist, порядку ad-hoc підписання та структури IPA `Payload/WallTrace AR.app`, відсутності paid signing/profile/secrets.
-- Файли нормалізовані в UTF-8 без BOM і з LF; `.gitattributes` зберігає LF для shell.
-- Тестовий PNG читається Pillow як RGBA; має прозорі області та несиметричні TOP/LEFT-маркери.
-- Офіційні вебджерела Apple, GitHub, opa334/TrollStore і JJTech0130/TrollRestore прочитано; актуальну таблицю інсталяції перевірено за посиланням upstream. Джерела наведені в README.
-- ZIP перевірено на цілісність, включення `.github/workflows/build-ipa.yml` та побайтову відповідність вихідній папці. SHA-256 ZIP додано окремо.
+[GitHub Actions run #4](https://github.com/schekloinn/walltrace-ar/actions/runs/40581896148) — **success**. Зібраний коміт: `eaa21754d97c4c8ae2268a36bbd6f6423afc9ccf`. Пізніші зміни README і звіту не змінюють код застосунку.
 
-Валідатори були встановлені лише в проміжну папку `work` цієї Windows-сесії. Вони не входять до ZIP і не є залежностями iOS-застосунку.
+- Стандартний runner `macos-15-intel`, Xcode 16.4 (16F6), iPhoneOS SDK 18.5, XcodeGen 2.46.0.
+- XcodeGen справді згенерував `WallTraceAR.xcodeproj`; Apple Swift parser і повна компіляція/компонування завершилися успішно: `BUILD SUCCEEDED`.
+- Device arm64, `IPHONEOS_DEPLOYMENT_TARGET=15.0`, `TARGETED_DEVICE_FAMILY=1`.
+- Збірка без Apple team/profile/certificate; локальний ad-hoc підпис bundle. `codesign --verify --deep --strict` підтвердив `valid on disk` і `satisfies its Designated Requirement`.
+- IPA запакована як `Payload/WallTrace AR.app`; `unzip -tq` пройшов. Artifact завантажено в GitHub Actions.
+- Початковий arm64 macOS host довго залишався в черзі, тому для фінальної збірки використано стандартний Intel host. Вихідна архітектура застосунку лишається arm64.
 
-## Не виконано й не заявляється успішним
+## Перевірка фактично завантаженої IPA на Windows
 
-- Apple Swift type checking / перевірка доступності API за iOS SDK.
-- Виконання XcodeGen та генерація `.xcodeproj` на macOS.
-- `xcodebuild`, перевірка Mach-O, `codesign`, створення та встановлення реальної IPA.
-- Запуск GitHub Actions: репозиторій не публікувався, зовнішні зміни не виконувалися.
-- Запуск на iPhone 7 з iOS 15.8.7; перевірка камери, UI, орієнтації текстури, пошуку стін, дрейфу, переривань та TrollStore/TrollRestore.
+- SHA-256 зовнішнього artifact ZIP збігається з digest GitHub: `6aae5e9da9a3eb4ea52ec8870abab1909dcd7156d53d820b2c9ed688b13c9dd4`.
+- SHA-256 IPA збігається з файлом, сформованим на runner: `4174711e8f4ec2bd43d7130d3958812b5490f56de4c796f7e44e70e5c7b6cdf7`.
+- Розмір IPA: 56449 байтів. ZIP CRC — PASS.
+- Зібраний `Info.plist`: bundle `local.walltrace.ar`, версія 1.0, camera usage присутній, `MinimumOSVersion=15.0`, `UIDeviceFamily=[1]`.
+- Mach-O executable: arm64, platform iOS, мінімальна ОС у load command — 15.0.0; executable permissions збережені, embedded code signature присутня. Криптографічну перевірку підпису виконав macOS `codesign` у CI.
 
-Tree-sitter підтверджує синтаксис за своєю граматикою, але не замінює компілятор Swift. Зелений локальний звіт не є підтвердженням готової IPA. CI додатково запускає Apple `swiftc -frontend -parse`, повний device build, перевіряє arm64 та MinimumOSVersion, ad-hoc підпис і ZIP IPA; лише успішний CI створить artifact IPA.
+## Локальні перевірки вихідного проєкту
+
+- PyYAML 6.0.3 розібрав обидва YAML із відхиленням дублікатів ключів; перевірені target, scheme, runner, trigger, read-only permissions і відсутність Swift package runtime-залежностей.
+- `plistlib` успішно розібрав вихідний plist і перевірив camera usage, arm64/ARKit, iOS 15.0 та портретну орієнтацію.
+- Tree-sitter 0.26.0 + Swift 0.7.4 / Bash 0.25.1: усі Swift-файли й build script без помилок синтаксичного дерева.
+- 48 незалежних числових випадків матриці розміщення: вертикальність, ортогональність, правильна орієнтація й нормаль у бік камери.
+- Тестовий PNG — коректний RGBA із прозорими областями та несиметричними TOP/LEFT-маркерами.
+- Файли UTF-8 без BOM, LF. Вихідний ZIP містить приховану `.github/workflows` і перевіряється на цілісність та побайтову відповідність локальній папці.
+- Офіційні джерела Apple, GitHub, opa334/TrollStore і JJTech0130/TrollRestore наведено в README.
+
+Валідатори Windows встановлені лише в проміжну папку `work`; вони не входять до ZIP і не є залежностями застосунку.
+
+## Ще не перевірено
+
+Запуск на фізичному iPhone 7 з iOS 15.8.7, встановлення через TrollStore/TrollRestore, реальний дозвіл камери, UI на екрані телефона, імпорт із file providers, пошук стін, орієнтація текстури, дрейф, продуктивність і системні переривання. Успішна компіляція та структура IPA не гарантують роботу кожного з цих сценаріїв на пристрої.
 
 ## Перший приймальний тест на телефоні
 
