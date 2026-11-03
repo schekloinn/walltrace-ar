@@ -97,6 +97,9 @@ struct TrackerState: Codable, Equatable {
     func estimatedDaysRemaining(on day: String) -> Int {
         Int(ceil(Double(limit(on: day)) / Double(step)))
     }
+    func reductionPercent(on day: String) -> Int {
+        max(0, Int(((1 - Double(limit(on: day)) / Double(max(1, baseline))) * 100).rounded()))
+    }
     func avoided(until now: Date, calendar: Calendar = .current) -> Int {
         // Count only days with actual records; do not invent savings on missing days.
         let today = DayKey.key(now, calendar: calendar)
@@ -134,15 +137,17 @@ enum SharedStorage {
         return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Puffline", isDirectory: true)
     }
     static func file() -> URL { folder().appendingPathComponent(filename) }
-    static func load() throws -> TrackerState {
-        let state = try JSONDecoder().decode(TrackerState.self, from: Data(contentsOf: file()))
+    static func load(from url: URL? = nil) throws -> TrackerState {
+        let state = try JSONDecoder().decode(TrackerState.self, from: Data(contentsOf: url ?? file()))
         guard state.valid() else { throw NSError(domain: "Puffline", code: 1, userInfo: [NSLocalizedDescriptionKey: "Резервна копія містить некоректні дані."]) }
         return state
     }
-    static func save(_ state: TrackerState) throws {
-        try FileManager.default.createDirectory(at: folder(), withIntermediateDirectories: true)
+    static func save(_ state: TrackerState, to url: URL? = nil) throws {
+        guard state.valid() else { throw NSError(domain: "Puffline", code: 1, userInfo: [NSLocalizedDescriptionKey: "Некоректні дані. Попередню історію не змінено."]) }
+        let destination = url ?? file()
+        try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        try encoder.encode(state).write(to: file(), options: [.atomic])
+        try encoder.encode(state).write(to: destination, options: [.atomic])
     }
 }

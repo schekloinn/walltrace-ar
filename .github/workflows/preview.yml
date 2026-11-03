@@ -1,8 +1,6 @@
 name: Puffline simulator preview
 "on":
-  push:
-    branches: [puffline-ios15]
-    paths: ["App/**", "Shared/**", "Widget/**", "Tests/**", "scripts/**", "project.yml", ".github/workflows/preview.yml"]
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:

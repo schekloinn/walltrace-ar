@@ -51,7 +51,7 @@ struct ProgressViewContent: View {
         }
     }
     var reductionLabel: String {
-        let percent = Int((1 - Double(store.limit) / Double(max(1, store.state.baseline))) * 100)
+        let percent = store.state.reductionPercent(on: store.day)
         return "↓ \(max(0, percent))%"
     }
     var recentDays: [Date] { (-3...3).map { Calendar.current.date(byAdding: .day, value: $0, to: store.now)! } }

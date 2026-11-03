@@ -77,6 +77,27 @@ enum Checks {
         let count = state.events.count
         for _ in 0..<100 { state.advance(to: sixth, calendar: cal) }
         check(state.events.count == count, "Refresh never creates phantom events")
-        print("PASS: \(checks) model checks, including DST, skipped days, adaptation, backups and savings")
+        var percentage = TrackerState()
+        percentage.start(baseline: 180, duration: 30, now: day, calendar: cal)
+        percentage.records["2026-10-23"]?.limit = 144
+        check(percentage.reductionPercent(on: "2026-10-23") == 20, "Round 180 to 144 reduction to 20%, not 19%")
+        percentage.records["2026-10-23"]?.limit = 0
+        check(percentage.reductionPercent(on: "2026-10-23") == 100, "Zero target is 100% reduction")
+        let scratch = FileManager.default.temporaryDirectory.appendingPathComponent("PufflineChecks-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: scratch) }
+        let file = scratch.appendingPathComponent("nested/state.json")
+        try SharedStorage.save(state, to: file)
+        let diskState = try SharedStorage.load(from: file)
+        check(diskState == state, "Filesystem persistence roundtrip")
+        let originalData = try Data(contentsOf: file)
+        corrupt = state; corrupt.baseline = 0
+        do { try SharedStorage.save(corrupt, to: file); check(false, "Invalid save must fail") }
+        catch { check(true, "Invalid save rejected") }
+        let afterInvalidSave = try Data(contentsOf: file)
+        check(originalData == afterInvalidSave, "Invalid save preserves original history")
+        try Data("not a backup".utf8).write(to: scratch.appendingPathComponent("invalid.json"))
+        do { _ = try SharedStorage.load(from: scratch.appendingPathComponent("invalid.json")); check(false, "Malformed backup must fail") }
+        catch { check(true, "Malformed backup rejected") }
+        print("PASS: \(checks) checks, including DST, adaptation, rounding, on-disk persistence and backup protection")
     }
 }
