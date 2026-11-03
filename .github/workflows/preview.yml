@@ -26,6 +26,7 @@ jobs:
           build/checks | tee build/checks.log
           xcrun swift scripts/icon.swift
           xcodegen generate
+          bash scripts/start-simulator.sh
       - name: Build simulator only — no IPA
         run: |
           set -euo pipefail
@@ -44,4 +45,3 @@ jobs:
             build/build.log
             build/devices.json
           retention-days: 7
-

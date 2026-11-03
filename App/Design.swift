@@ -15,7 +15,8 @@ struct Card<Content: View>: View {
     var content: Content
     init(@ViewBuilder content: () -> Content) { self.content = content() }
     var body: some View {
-        content.padding(20).frame(maxWidth: .infinity, alignment: .leading)
+        VStack(alignment: .leading, spacing: 0) { content }
+            .padding(20).frame(maxWidth: .infinity, alignment: .leading)
             .background(Style.card).clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
     }
 }
@@ -57,6 +58,10 @@ extension Date {
     func uk(_ format: String) -> String {
         let formatter = DateFormatter(); formatter.locale = Locale(identifier: "uk_UA"); formatter.dateFormat = format
         return formatter.string(from: self)
+    }
+    func ukSentence(_ format: String) -> String {
+        let value = uk(format)
+        return value.prefix(1).uppercased() + value.dropFirst()
     }
 }
 

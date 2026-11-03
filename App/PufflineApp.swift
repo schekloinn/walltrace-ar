@@ -96,7 +96,7 @@ struct RootView: View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 5) {
                 Text("Puffline").font(.system(size: 29, weight: .bold, design: .rounded)).tracking(-1.0)
-                Text(tab == 0 ? store.now.uk("EEEE, d MMMM").capitalized : "Твій прогрес, крок за кроком")
+                Text(tab == 0 ? store.now.ukSentence("EEEE, d MMMM") : "Твій прогрес, крок за кроком")
                     .font(.system(size: 12)).foregroundColor(.secondary)
             }
             Spacer()
@@ -226,7 +226,7 @@ struct HomeView: View {
                         .frame(width: 74, height: 48).background(Style.card).foregroundColor(Style.ink).clipShape(Capsule())
                     Text("Відмітити затяжку").font(.system(size: 11, weight: .medium)).foregroundColor(Style.card.opacity(0.6))
                 }
-            }.frame(height: compact ? 105 : 133).clipped()
+            }.frame(height: compact ? 105 : 133).clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         }.buttonStyle(.plain).accessibilityLabel("Додати одну затяжку")
     }
 }

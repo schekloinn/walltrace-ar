@@ -1,20 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 mkdir -p build/previews
-xcrun simctl list devices available -j > build/devices.json
-device=$(python3 - <<'PY'
-import json
-data=json.load(open('build/devices.json'))
-devices=[(rt,d) for rt,ds in data['devices'].items() if 'iOS-18' in rt for d in ds if d.get('isAvailable')]
-se=[x for x in devices if 'iPhone SE (3rd generation)' == x[1]['name']]
-pool=se or [x for x in devices if 'iPhone' in x[1]['name']]
-assert pool, 'No available iPhone simulator'
-runtime, device=sorted(pool,key=lambda x:x[0])[-1]
-open('build/previews/simulator.txt','w').write(runtime+'\n'+device['name']+'\n')
-print(device['udid'])
-PY
-)
-xcrun simctl boot "$device" || true
+device=$(cat build/simulator-id.txt)
 python3 - "$device" <<'PY'
 import subprocess, sys
 subprocess.run(['xcrun','simctl','bootstatus',sys.argv[1],'-b'],check=True,timeout=240)
@@ -26,11 +13,11 @@ for screen in home progress settings breathe; do
   arguments=(--preview)
   if [[ "$screen" != home ]]; then arguments+=("--$screen"); fi
   xcrun simctl launch "$device" local.puffline.app "${arguments[@]}"
-  sleep 4
+  sleep 10
   xcrun simctl io "$device" screenshot "build/previews/$screen.png"
 done
 # Also show the dark appearance of the home screen.
 xcrun simctl terminate "$device" local.puffline.app
 xcrun simctl launch "$device" local.puffline.app --preview --dark
-sleep 3
+sleep 8
 xcrun simctl io "$device" screenshot build/previews/home-dark.png
