@@ -1,110 +1,82 @@
 import Foundation
-import simd
 
 @main
 enum Checks {
-    static func require(_ condition: @autoclosure () -> Bool, _ message: String) {
-        if !condition() { fatalError(message) }
-    }
-
-    static func main() {
-        var slots = ImageSlots<String>()
-        for index in 0..<3 {
-            slots.select(index)
-            slots.replace(at: index, content: "image\(index)", name: "\(index).png")
-            slots.setAppearance(width: Float(index + 1) * 0.3, opacity: Float(index + 1) * 0.2)
+    static func main() throws {
+        var checks = 0
+        func check(_ value: @autoclosure () -> Bool, _ message: String) {
+            precondition(value(), message); checks += 1
         }
-        slots.select(9)
-        require(slots.selectedIndex == 2, "Invalid selection must not escape three slots")
-        slots.replace(at: 3, content: "fourth", name: "fourth.png")
-        require(ImageSlots<String>.capacity == 3, "Only three slots")
-        slots.select(1)
-        slots.removeSelected()
-        require(slots[0].content == "image0" && slots[2].content == "image2", "Deleting one slot must preserve its neighbours")
-        require(slots[1].content == nil, "Selected image deleted")
-        require(abs(slots[0].width - 0.3) < 0.0001 && abs(slots[2].opacity - 0.6) < 0.0001,
-                "Slot appearances must be independent")
-        slots.select(0)
-        slots.setAppearance(width: 99, opacity: -2)
-        require(slots[0].width == 2 && slots[0].opacity == 0.05, "Clamp controls safely")
-
-        let identity = matrix_identity_float4x4
-        let far = SIMD3<Float>(0, 0, 1)
-        var filter = AnchorStabilizer(transform: identity, timestamp: 0)
-        let near = filter.update(target: identity, camera: SIMD3<Float>(0, 0, 0.15), trackingNormal: true, timestamp: 0.1)
-        require(!near.visible && near.reason == .tooClose, "Hide an unreliable close-up overlay")
-        let hysteresis = filter.update(target: identity, camera: SIMD3<Float>(0, 0, 0.25), trackingNormal: true, timestamp: 0.2)
-        require(!hysteresis.visible && hysteresis.reason == .tooClose, "No near-threshold flicker")
-        require(!filter.update(target: identity, camera: far, trackingNormal: true, timestamp: 0.3).visible,
-                "Wait for normal tracking to settle")
-        require(filter.update(target: identity, camera: far, trackingNormal: true, timestamp: 0.9).visible,
-                "Restore after recovery")
-        require(!filter.update(target: identity, camera: far, trackingNormal: false, timestamp: 1).visible,
-                "Tracking loss must hide content")
-        _ = filter.update(target: identity, camera: far, trackingNormal: true, timestamp: 1.1)
-        require(filter.update(target: identity, camera: far, trackingNormal: true, timestamp: 1.7).visible,
-                "Recover after tracking loss")
-
-        var smoothing = AnchorStabilizer(transform: identity, timestamp: 0)
-        var shifted = identity
-        shifted.columns.3.x = 0.04
-        let smoothed = smoothing.update(target: shifted, camera: far, trackingNormal: true, timestamp: 1.0 / 30)
-        require(smoothed.visible && smoothed.transform.columns.3.x > 0 && smoothed.transform.columns.3.x <= 0.00401,
-                "Small correction must be speed limited, not snap")
-        var jump = identity
-        jump.columns.3.x = 0.2
-        let held = smoothing.update(target: jump, camera: far, trackingNormal: true, timestamp: 0.1)
-        require(!held.visible && held.reason == .correcting, "Large correction must be hidden")
-        require(held.transform.columns.3.x < 0.01, "Hold the last accepted world pose")
-        require(!smoothing.update(target: jump, camera: far, trackingNormal: true, timestamp: 0.3).visible,
-                "Reject a single short-lived correction")
-        let settled = smoothing.update(target: jump, camera: far, trackingNormal: true, timestamp: 0.5)
-        require(settled.visible && abs(settled.transform.columns.3.x - 0.2) < 0.0001,
-                "Accept a persistent correction while hidden")
-        var restored = AnchorStabilizer(transform: identity, timestamp: 0, requiresRecovery: true)
-        require(!restored.update(target: identity, camera: far, trackingNormal: true, timestamp: 0.1).visible,
-                "A restored map must not show content before tracking settles")
-        require(restored.update(target: identity, camera: far, trackingNormal: true, timestamp: 0.7).visible,
-                "Show restored content after stable tracking")
-        var drifting = AnchorStabilizer(transform: identity, timestamp: 0)
-        _ = drifting.update(target: jump, camera: far, trackingNormal: true, timestamp: 0.1)
-        jump.columns.3.x = 0.212
-        _ = drifting.update(target: jump, camera: far, trackingNormal: true, timestamp: 0.2)
-        jump.columns.3.x = 0.224
-        require(!drifting.update(target: jump, camera: far, trackingNormal: true, timestamp: 0.3).visible,
-                "A wandering correction must restart its consistency window")
-        require(!drifting.update(target: jump, camera: far, trackingNormal: true, timestamp: 0.5).visible,
-                "Do not accept accumulated drift as a stable correction")
-        let pngHeader = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
-        let storedImage = SavedProject.Image(slot: 2, name: "saved.png", png: pngHeader, width: 0.7,
-                                            opacity: 0.4, anchorID: UUID())
-        let project = SavedProject(selectedIndex: 2, worldMap: Data([1, 2, 3]), images: [storedImage])
-        do {
-            let data = try JSONEncoder().encode(project)
-            let decoded = try JSONDecoder().decode(SavedProject.self, from: data)
-            try decoded.validate()
-            let saveURL = URL(fileURLWithPath: "build/check-scene.json")
-            try project.write(to: saveURL)
-            let fromDisk = try SavedProject.read(from: saveURL)
-            require(fromDisk.images[0].name == "saved.png", "Read the written scene from disk")
-            let validBytes = try Data(contentsOf: saveURL)
-            require(decoded.images[0].anchorID == storedImage.anchorID && decoded.selectedIndex == 2,
-                    "Persist anchor identity and selection")
-            require(decoded.images[0].width == 0.7 && decoded.images[0].opacity == 0.4,
-                    "Persist per-image settings")
-            var invalid = decoded
-            invalid.images.append(storedImage)
-            do { try invalid.write(to: saveURL); fatalError("Do not overwrite a valid save with invalid data") } catch {}
-            require((try? Data(contentsOf: saveURL)) == validBytes, "A failed save must preserve the last valid scene")
-            do { try invalid.validate(); fatalError("Reject duplicate slots and anchor identities") } catch {}
-            invalid = decoded
-            invalid.formatVersion = 99
-            do { try invalid.validate(); fatalError("Reject unsupported saved format") } catch {}
-            invalid = decoded
-            invalid.images[0].slot = 4
-            do { try invalid.validate(); fatalError("Reject saved fourth slot") } catch {}
-        } catch { fatalError("Saved project roundtrip failed: \(error)") }
-        print("PASS: saved scene roundtrip, anchor identities, per-image settings and corrupt-state rejection")
-        print("PASS: three independent image slots, deletion and limits; close-range hysteresis, tracking recovery, smoothing and large-correction rejection")
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "Europe/Kyiv")!
+        let day = cal.date(from: DateComponents(year: 2026, month: 10, day: 23, hour: 12))!
+        let next = cal.date(byAdding: .day, value: 1, to: day)!
+        var state = TrackerState()
+        check(!state.onboarded, "Fresh install must be empty")
+        state.add(1, trigger: "x", now: day, calendar: cal)
+        check(state.events.isEmpty, "No events before onboarding")
+        state.start(baseline: 100, duration: 30, now: day, calendar: cal)
+        check(state.step == 4, "Ceiling reduction step")
+        state.add(30, trigger: "Перерва", now: day, calendar: cal)
+        check(state.count(on: "2026-10-23", calendar: cal) == 30, "Batch count")
+        state.add(0, trigger: "x", now: day, calendar: cal)
+        state.add(501, trigger: "x", now: day, calendar: cal)
+        check(state.events.count == 1, "Reject invalid batches")
+        state.advance(to: next, calendar: cal)
+        check(state.limit(on: "2026-10-24") == 96, "Reduce after successful tracked day")
+        check(state.count(on: "2026-10-24", calendar: cal) == 0, "Reset daily counter")
+        state.add(100, trigger: "x", now: next, calendar: cal)
+        let third = cal.date(byAdding: .day, value: 2, to: day)!
+        state.advance(to: third, calendar: cal)
+        check(state.limit(on: "2026-10-25") == 96, "Hold on excess")
+        state.setPaused(true, now: third, calendar: cal)
+        let fourth = cal.date(byAdding: .day, value: 3, to: day)!
+        state.advance(to: fourth, calendar: cal)
+        check(state.limit(on: "2026-10-26") == 96, "Pause holds target across DST")
+        state.setPaused(false, now: fourth, calendar: cal)
+        let sixth = cal.date(byAdding: .day, value: 5, to: day)!
+        state.advance(to: sixth, calendar: cal)
+        check(state.limit(on: "2026-10-28") == 92, "Missing days hold limit")
+        check(state.records["2026-10-27"]?.visited == false, "Missing day not marked successful")
+        check(DayKey.next("2026-10-25", calendar: cal) == "2026-10-26", "DST fall day")
+        check(DayKey.next("2026-03-29", calendar: cal) == "2026-03-30", "DST spring day")
+        check(DayKey.next("2028-02-28", calendar: cal) == "2028-02-29", "Leap year")
+        check(DayKey.next("2026-12-31", calendar: cal) == "2027-01-01", "Year boundary")
+        let before = state.records["2026-10-24"]
+        state.advance(to: next, calendar: cal)
+        check(state.records["2026-10-24"] == before, "Backwards clock preserves limits")
+        let data = try JSONEncoder().encode(state)
+        let decoded = try JSONDecoder().decode(TrackerState.self, from: data)
+        check(decoded == state, "Exact JSON roundtrip")
+        check(decoded.valid(), "Valid backup accepted")
+        var corrupt = state; corrupt.baseline = 0
+        check(!corrupt.valid(), "Reject zero baseline backup")
+        corrupt = state; corrupt.events.append(corrupt.events[0])
+        check(!corrupt.valid(), "Reject duplicate event IDs")
+        corrupt = state; corrupt.records["2026-99-77"] = DayRecord(limit: 2, visited: true, paused: false)
+        check(!corrupt.valid(), "Reject impossible date")
+        corrupt = state; corrupt.dailyCost = .infinity
+        check(!corrupt.valid(), "Reject infinite cost")
+        var minimal = TrackerState(); minimal.start(baseline: 1, duration: 30, now: day, calendar: cal)
+        minimal.advance(to: next, calendar: cal)
+        check(minimal.limit(on: "2026-10-24") == 0, "Reach zero, never negative")
+        minimal.quitAt = day
+        minimal.add(1, trigger: "x", now: next, calendar: cal)
+        check(minimal.quitAt == nil, "New puff resets abstinence timer")
+        var fixed = TrackerState(); fixed.start(baseline: 100, duration: 30, now: day, calendar: cal)
+        fixed.adaptive = false; fixed.add(150, trigger: "x", now: day, calendar: cal); fixed.advance(to: next, calendar: cal)
+        check(fixed.limit(on: "2026-10-24") == 96, "Fixed pace ignores excess")
+        var money = TrackerState(); money.start(baseline: 100, duration: 30, now: day, calendar: cal)
+        money.dailyCost = 50; money.add(50, trigger: "x", now: day, calendar: cal)
+        check(money.avoided(until: day, calendar: cal) == 50, "Avoided puffs")
+        check(money.savings(until: day, calendar: cal) == 25, "Proportional savings")
+        money.add(100, trigger: "x", now: day, calendar: cal)
+        check(money.savings(until: day, calendar: cal) == 0, "No negative savings")
+        money.start(baseline: 120, duration: 14, now: next, calendar: cal)
+        check(money.events.count == 2, "Changing plan preserves event history")
+        let count = state.events.count
+        for _ in 0..<100 { state.advance(to: sixth, calendar: cal) }
+        check(state.events.count == count, "Refresh never creates phantom events")
+        print("PASS: \(checks) model checks, including DST, skipped days, adaptation, backups and savings")
     }
 }
