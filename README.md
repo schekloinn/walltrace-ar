@@ -11,8 +11,9 @@ JSON резервні копії та відновлення, CSV, малий/с
 
 ## Поточний етап
 
-Користувач попросив показати реальні скриншоти до збирання IPA.
-Workflow preview.yml збирає лише Debug для симулятора і робить скриншоти. IPA не створюється.
+Користувач переглянув скриншоти й схвалив створення IPA.
+Workflow build-ipa.yml збирає Release arm64 для iPhone/iOS 15.0+, підписує застосунок і віджет та перевіряє пакет.
+Workflow preview.yml запускається вручну й створює лише Debug-скриншоти симулятора.
 Демонстраційна історія в DemoData.swift існує лише для DEBUG і аргументу --preview.
 Release ніколи не завантажує ці приклади.
 
@@ -28,5 +29,8 @@ Release ніколи не завантажує ці приклади.
 Немає автоматичного визначення затяжок, серверів, реклами, платежів чи медичних прогнозів.
 Реальне встановлення через TrollStore, віджети та сповіщення на фізичному iOS 15.8.7 поки не перевірено.
 
-Локальне збирання preview на Mac: xcodegen generate; див. .github/workflows/preview.yml.
+Локальне збирання IPA на Mac із Xcode 16.4 та XcodeGen: `bash scripts/build-ipa.sh`.
+Результат: build/Puffline-1.0.ipa і SHA-256. Ad-hoc підпис означає codesign identity «-», не Apple Ad Hoc distribution.
+TrollStore перепідписує пакет під час встановлення. Передай IPA на iPhone: «Поділитися» → TrollStore → Install.
+Повторна перевірка пакета: `python3 scripts/validate-ipa.py build/Puffline-1.0.ipa`.
 Модель: xcrun swiftc Shared/Model.swift Tests/Checks.swift -o checks && ./checks.
