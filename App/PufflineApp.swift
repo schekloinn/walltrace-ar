@@ -45,11 +45,12 @@ struct RootView: View {
     private let timer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
     var body: some View {
         Group {
-            if !store.state.onboarded { OnboardingView() }
+            if store.storageBlocked { RecoveryView() }
+            else if !store.state.onboarded { OnboardingView() }
             else {
                 VStack(spacing: 0) {
                     ScrollView(showsIndicators: false) {
-                        VStack(spacing: 18) {
+                        VStack(spacing: 14) {
                             header
                             if tab == 0 { HomeView(sheet: $sheet) }
                             else { ProgressViewContent() }
@@ -126,6 +127,7 @@ struct HomeView: View {
     @EnvironmentObject var store: Store
     @Binding var sheet: ScreenSheet?
     @State private var confirmQuit = false
+    var compact: Bool { UIScreen.main.bounds.height < 700 }
     var body: some View {
         VStack(spacing: 14) {
             limitStrip
@@ -188,14 +190,14 @@ struct HomeView: View {
             GeometryReader { geo in
                 VStack { Spacer(minLength: 0); Rectangle().fill(Style.ink.opacity(0.055)).frame(height: geo.size.height * min(1, CGFloat(store.used) / CGFloat(max(1, store.limit)))) }
             }.clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
-            VStack(spacing: 14) {
+            VStack(spacing: compact ? 6 : 14) {
                 HStack {
-                    Label("ЗАТЯЖКИ", systemImage: "cloud").font(.system(size: 10, weight: .semibold)).tracking(2)
+                    Label("ЗАТЯЖКИ", systemImage: "cloud").font(.system(size: 10, weight: .semibold))
                     Spacer()
                     if store.used > store.limit { Text("ПОНАД ЛІМІТ").font(.system(size: 9, weight: .bold)).foregroundColor(Style.warning) }
                 }.foregroundColor(.secondary)
                 Spacer(minLength: 0)
-                Text("\(store.used)").font(.system(size: 88, weight: .semibold, design: .rounded)).tracking(-5)
+                Text("\(store.used)").font(.system(size: compact ? 76 : 88, weight: .semibold, design: .rounded)).tracking(-4)
                     .minimumScaleFactor(0.45).lineLimit(1)
                     .accessibilityLabel("Сьогодні \(store.used) затяжок")
                 Text("із \(store.limit) на сьогодні").font(.system(size: 13)).foregroundColor(.secondary)
@@ -204,8 +206,8 @@ struct HomeView: View {
                     Circle().fill(store.used > store.limit ? Style.warning : Style.ink.opacity(0.4)).frame(width: 5, height: 5)
                     Text(lastLabel).font(.system(size: 11))
                 }.foregroundColor(.secondary).padding(.horizontal, 12).padding(.vertical, 8).background(Style.subtle).clipShape(Capsule())
-            }.padding(23)
-        }.frame(height: 275)
+            }.padding(compact ? 18 : 23)
+        }.frame(height: compact ? 220 : 275)
     }
     var lastLabel: String {
         guard let last = store.last else { return "Твій перший крок починається тут" }
@@ -224,7 +226,7 @@ struct HomeView: View {
                         .frame(width: 74, height: 48).background(Style.card).foregroundColor(Style.ink).clipShape(Capsule())
                     Text("Відмітити затяжку").font(.system(size: 11, weight: .medium)).foregroundColor(Style.card.opacity(0.6))
                 }
-            }.frame(height: 133).clipped()
+            }.frame(height: compact ? 105 : 133).clipped()
         }.buttonStyle(.plain).accessibilityLabel("Додати одну затяжку")
     }
 }

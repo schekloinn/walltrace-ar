@@ -1,4 +1,25 @@
 import SwiftUI
+import UniformTypeIdentifiers
+
+struct RecoveryView: View {
+    @EnvironmentObject var store: Store
+    @State private var importing = false
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            Text("Puffline").font(.largeTitle.bold())
+            Image(systemName: "externaldrive.badge.exclamationmark").font(.system(size: 42))
+            Text("Збережемо твою історію").font(.title2.bold())
+            Text("Не вдалося прочитати файл даних. Оригінал залишився на місці; нові записи заблоковано, щоб нічого не перезаписати.")
+                .foregroundColor(.secondary)
+            PrimaryButton(title: "Відновити резервну копію", symbol: "arrow.clockwise") { importing = true }
+            Spacer()
+        }.padding(28).padding(.top, 30).background(Style.bg.ignoresSafeArea())
+            .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
+                do { try store.restore(result.get()) }
+                catch { store.error = error.localizedDescription }
+            }
+    }
+}
 
 struct AddPuffsView: View {
     @EnvironmentObject var store: Store

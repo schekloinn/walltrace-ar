@@ -10,7 +10,7 @@ final class Store: ObservableObject {
     @Published var toast: String?
     @Published var now = Date()
     private var undoState: TrackerState?
-    private var storageBlocked = false
+    @Published private(set) var storageBlocked = false
     var day: String { DayKey.key(now) }
     var used: Int { state.count(on: day) }
     var limit: Int { state.limit(on: day) }

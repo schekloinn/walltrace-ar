@@ -78,7 +78,7 @@ struct ProgressViewContent: View {
     }
     func datum(_ date: Date, label: String) -> BarDatum {
         let key = DayKey.key(date)
-        let target = store.state.records[key]?.limit ?? (key > store.day ? max(0, store.limit - store.state.step * max(0, Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: store.now), to: date).day ?? 0)) : 0)
+        let target = store.state.records[key]?.limit ?? (key > store.day ? (store.state.paused ? store.limit : max(0, store.limit - store.state.step * max(0, Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: store.now), to: date).day ?? 0))) : 0)
         return BarDatum(id: key, value: store.state.count(on: key), target: target, label: label, selected: key == store.day, recorded: store.state.records[key]?.visited == true)
     }
     var weekCard: some View {

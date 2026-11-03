@@ -29,7 +29,7 @@ jobs:
       - name: Build simulator only — no IPA
         run: |
           set -euo pipefail
-          xcodebuild -project Puffline.xcodeproj -scheme Puffline -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build/build.log
+          xcodebuild -project Puffline.xcodeproj -scheme Puffline -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO ARCHS=x86_64 ONLY_ACTIVE_ARCH=YES build 2>&1 | tee build/build.log
       - name: Capture real app screens
         run: bash scripts/preview.sh
       - uses: actions/upload-artifact@v4
