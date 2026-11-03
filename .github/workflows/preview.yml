@@ -6,7 +6,7 @@ name: Puffline simulator preview
 permissions:
   contents: read
 concurrency:
-  group: puffline-preview
+  group: puffline-preview-${{ github.sha }}
   cancel-in-progress: true
 jobs:
   preview:
@@ -44,3 +44,4 @@ jobs:
             build/build.log
             build/devices.json
           retention-days: 7
+
