@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   preview:
-    runs-on: macos-15-intel
+    runs-on: macos-15
     timeout-minutes: 25
     env:
       DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
@@ -29,8 +29,9 @@ jobs:
       - name: Build simulator only — no IPA
         run: |
           set -euo pipefail
-          xcodebuild -project Puffline.xcodeproj -scheme Puffline -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO ARCHS=x86_64 ONLY_ACTIVE_ARCH=YES build 2>&1 | tee build/build.log
+          xcodebuild -project Puffline.xcodeproj -scheme Puffline -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO ARCHS=arm64 ONLY_ACTIVE_ARCH=YES build 2>&1 | tee build/build.log
       - name: Capture real app screens
+        timeout-minutes: 6
         run: bash scripts/preview.sh
       - uses: actions/upload-artifact@v4
         if: always()
@@ -41,4 +42,5 @@ jobs:
             build/checks.log
             build/toolchain.txt
             build/build.log
+            build/devices.json
           retention-days: 7

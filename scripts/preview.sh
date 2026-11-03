@@ -5,7 +5,7 @@ xcrun simctl list devices available -j > build/devices.json
 device=$(python3 - <<'PY'
 import json
 data=json.load(open('build/devices.json'))
-devices=[(rt,d) for rt,ds in data['devices'].items() if 'iOS' in rt for d in ds if d.get('isAvailable')]
+devices=[(rt,d) for rt,ds in data['devices'].items() if 'iOS-18' in rt for d in ds if d.get('isAvailable')]
 se=[x for x in devices if 'iPhone SE (3rd generation)' == x[1]['name']]
 pool=se or [x for x in devices if 'iPhone' in x[1]['name']]
 assert pool, 'No available iPhone simulator'
@@ -15,7 +15,10 @@ print(device['udid'])
 PY
 )
 xcrun simctl boot "$device" || true
-xcrun simctl bootstatus "$device" -b
+python3 - "$device" <<'PY'
+import subprocess, sys
+subprocess.run(['xcrun','simctl','bootstatus',sys.argv[1],'-b'],check=True,timeout=240)
+PY
 xcrun simctl status_bar "$device" override --time '9:41' --dataNetwork wifi --wifiMode active --wifiBars 3 --batteryState charged --batteryLevel 100
 xcrun simctl install "$device" build/DerivedData/Build/Products/Debug-iphonesimulator/Puffline.app
 for screen in home progress settings breathe; do
